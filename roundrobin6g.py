@@ -241,6 +241,30 @@ class System:
 
         return ues_rates
 
+    def system_throughput(self):
+         ues_rates = []
+
+        for i in self.__users:
+            user = self.__users[i]
+
+            aps = user.aps
+
+            ap1 = self.__aps[aps[0]]
+            ap2 = self.__aps[aps[1]]
+            ap3 = self.__aps[aps[2]]
+
+            rate1 = ap1.links[user.id].capacity
+            rate2 = ap2.links[user.id].capacity
+            rate3 = ap3.links[user.id].capacity
+
+            total_rate = rate1 + rate2 + rate3
+
+            ues_rates.append(total_rate)
+
+        return sum(ues_rates)
+
+        
+
 
 
 
@@ -367,7 +391,7 @@ class Channel:
         snr = self.__power / noise_power
         capacity = self.__band * log2(1 + snr)
 
-        return capacity / 10**6
+        return capacity / 10**6    # Megabits 
 
 
 
@@ -418,7 +442,7 @@ def main():
     print(system.aps[0].links[0].power)
     system.schedule()
     print(system.ue_experience())
-
+    print(system.system_throughput())
 
 
 
