@@ -50,7 +50,9 @@ class System:
             dict = {}
 
             for i in range(ue_num):
-                user = User(50, 50, i)
+                x = np.random.uniform(1,0,1000)[0]
+                y = np.random.uniform(1,0,1000)[0]
+                user = User(x, y, i)
                 dict[user.id] = user
 
             return dict
