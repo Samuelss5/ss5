@@ -13,6 +13,8 @@ k0 = 10**-17
 
 cover_area_side = 1000
 
+lowest_distance = 10
+
 band_blocks = Bandwidth / Band
 
 
@@ -50,8 +52,8 @@ class System:
             dict = {}
 
             for i in range(ue_num):
-                x = np.random.uniform(1,0,1000)[0]
-                y = np.random.uniform(1,0,1000)[0]
+                x = random.randint(0,1000)
+                y = random.randint(0,1000)
                 user = User(x, y, i)
                 dict[user.id] = user
 
@@ -128,10 +130,15 @@ class System:
 
                 distance = np.sqrt( (ap.x - user.x)**2 + (ap.y - user.y)**2 )
 
+                if distance < lowest_distance:
+                    user.y = 10
+
+                new_distance =  np.sqrt( (ap.x - user.x)**2 + (ap.y - user.y)**2 )
+
                 shadowing = exp(np.random.normal(0,2,1)[0])
                 # shadowing log normal random variable
 
-                received_power = shadowing * user.tpower * (constant / (distance ** 4 ))
+                received_power = shadowing * user.tpower * (constant / (new_distance ** 4 ))
 
                 pr_by_aps[j] = received_power
 
@@ -191,6 +198,7 @@ class System:
 
                 distance = np.sqrt( (cpu.x - ap.x) ** 2 + (cpu.y - ap.y) **2 )
 
+
                 cpus_distances[cpu.id] = distance
 
                 if distance < lowest_distance:
@@ -221,7 +229,7 @@ class System:
                         channel.band = each_user_band
 
 
-    def ue_experience(self):
+    def capacity_experience(self):
         ues_rates = []
 
         for i in self.__users:
@@ -233,19 +241,23 @@ class System:
             ap2 = self.__aps[aps[1]]
             ap3 = self.__aps[aps[2]]
 
-            rate1 = ap1.links[user.id].capacity
-            rate2 = ap2.links[user.id].capacity
-            rate3 = ap3.links[user.id].capacity
+            total_power = ap1.links[user.id].power + ap2.links[user.id].power + ap3.links[user.id].power
 
-            total_rate = rate1 + rate2 + rate3
+            total_band = ap1.links[user.id].band + ap2.links[user.id].band + ap3.links[user.id].band
 
-            ues_rates.append(total_rate)
+            noise_power = k0 * total_band
+
+            snr = total_band / noise_power
+
+            capacity = total_band * log2(1 + snr)
+
+
+            ues_rates.append(capacity / 10**6)
 
         return ues_rates
 
-    def system_throughput(self):
-         ues_rates = []
-
+    def snr_experience(self):
+        users_snr = []
         for i in self.__users:
             user = self.__users[i]
 
@@ -255,17 +267,19 @@ class System:
             ap2 = self.__aps[aps[1]]
             ap3 = self.__aps[aps[2]]
 
-            rate1 = ap1.links[user.id].capacity
-            rate2 = ap2.links[user.id].capacity
-            rate3 = ap3.links[user.id].capacity
+            total_power = ap1.links[user.id].power + ap2.links[user.id].power + ap3.links[user.id].power
 
-            total_rate = rate1 + rate2 + rate3
+            total_band = ap1.links[user.id].band + ap2.links[user.id].band + ap3.links[user.id].band
 
-            ues_rates.append(total_rate)
+            noise_power = k0 * total_band
 
-        return sum(ues_rates)
+            snr = total_power / noise_power
 
-        
+            users_snr.append(snr)
+
+        return users_snr
+
+
 
 
 
@@ -393,7 +407,7 @@ class Channel:
         snr = self.__power / noise_power
         capacity = self.__band * log2(1 + snr)
 
-        return capacity / 10**6    # Megabits 
+        return capacity / 10**6
 
 
 
@@ -409,9 +423,17 @@ class User:
     def x(self):
         return self.__x
 
+    @x.setter
+    def x(self, value):
+        self.__x += value
+
     @property
     def y(self):
         return self.__y
+
+    @y.setter
+    def y(self, value):
+        self.__y += value
 
     @property
     def id(self):
@@ -433,18 +455,69 @@ class User:
 
 
 def main():
-    system = System(4,3,1)
-    print(system.aps)
-    print(system.set_app_position())
-    print(system.users[0].x, system.users[0].y)
-    for i in range(4):
-        print(system.aps[i].x, system.aps[i].y)
+    users_capacity_5_users= []
+    users_snr_5_users = []
+    for i in range(1000):
+        system = System(36,5,1)
+        system.set_app_position()
 
-    print(system.connection())
-    print(system.aps[0].links[0].power)
-    system.schedule()
-    print(system.ue_experience())
-    print(system.system_throughput())
+
+        system.connection()
+
+        system.schedule()
+        users_capacity_5_users.extend(system.capacity_experience())
+        users_snr_5_users.extend(system.snr_experience())
+
+    users_capacity_10_users = []
+    users_snr_10_users = []
+
+    for i in range(1000):
+        system = System(36,10, 1)
+        system.set_app_position()
+        system.connection()
+        system.schedule()
+        users_snr_10_users.extend(system.snr_experience())
+        users_capacity_10_users.extend(system.capacity_experience())
+
+
+    users_capacity_15_users = []
+    users_snr_15_users = []
+
+    for i in range(1000):
+        system = System(36, 15, 1)
+        system.set_app_position()
+        system.connection()
+        system.schedule()
+        users_capacity_15_users.extend(system.capacity_experience())
+        users_snr_15_users.extend(system.snr_experience())
+
+
+
+
+
+
+
+
+
+    #y = np.arange(0, len(users_capacity)) / len(users_capacity)
+    x = np.sort(users_capacity_5_users)
+    x2 = np.sort(users_capacity_10_users)
+
+
+
+    #snr_dB = [10 * log10(users_snr[i]) for i in range(len(users_snr))]
+    #x = np.sort(snr_dB)
+    #y = np.arange(0, len(snr_dB)) / len(snr_dB)
+
+    plt.xlabel('Channel Capacity in Mbs')
+    plt.xlabel('SNR in dB')
+    plt.ylabel('CDF')
+    plt.plot(np.sort(users_capacity_5_users), np.arange(0, len(users_capacity_5_users)) / len(users_capacity_5_users), label = '5 users')
+    plt.plot(np.sort(users_capacity_10_users), np.arange(0, len(users_capacity_10_users)) / len(users_capacity_10_users), label = '10 users')
+    plt.plot(np.sort(users_capacity_15_users), np.arange(0, len(users_capacity_15_users)) / len(users_capacity_15_users), label = '15 users')
+    plt.legend(loc = 'upper left')
+    plt.show()
+
 
 
 
