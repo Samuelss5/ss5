@@ -360,9 +360,11 @@ class System:
             for i in range(k):
                 if i not in set_1:
 
-                    l += 1
-
+                  
+                    if l < nc:
+                        break
                     set_1.append(i)
+                    l += 1
                     size_set = len(set_1)
 
                     auxiliar_matrix = np.zeros((size_set,nc))
